@@ -8,11 +8,11 @@ additional quirks come into play too; we'll get to those soon enough.
 
 import yt_dlp
 import subprocess
-url = "https://youtu.be/7j4WQ5qOBZY?si=T3Q9cuf69KFf-pYV"
+url = "https://www.youtube.com/watch?v=sLfAcqbzdco"
 
 # times in seconds
-start = "02:08:00"
-end ="02:08:10"
+start = "00:04:03"
+end ="00:04:21"
 
 ffmpeg_args = {
   # - Don't forget the _i after "ffmpeg"; this puts the arguments before ffmpeg's `-i` argument,
@@ -23,7 +23,7 @@ ffmpeg_args = {
   "ffmpeg_o": ["-to", str(end), "-c:v", "copy", "-c:a", "copy"]  # Ensure both video & audio are copied
 }
 opts = {
-    "outtmpl":"myvid.webm",
+    "outtmpl":"input.webm",
     "external_downloader": "ffmpeg",
     "external_downloader_args": ffmpeg_args,
     "format": "bestvideo+bestaudio",  # Keep both video & audio
@@ -63,3 +63,25 @@ with yt_dlp.YoutubeDL(opts) as ydl:
   ydl.params = opts
   ydl.download(url)
 
+
+import subprocess
+def convert_webm_to_mp4(input_file, output_file):
+    command = [
+        "ffmpeg",
+        "-i", input_file,    # Input file
+        "-c:v", "libx265",   # Encode video with H.264
+        "-preset", "slow",   # Higher quality compression
+        "-crf", "22",        # Constant Rate Factor (lower = better quality)
+        "-c:a", "aac",       # Convert audio to AAC
+        "-b:a", "128k",      # Set audio bitrate to 128kbps
+        "-y",                # Overwrite output if exists
+        output_file
+    ]
+    
+    try:
+        subprocess.run(command, check=True)
+        print(f"✅ Conversion successful: {output_file}")
+    except subprocess.CalledProcessError as e:
+        print(f"❌ FFmpeg error: {e}")
+
+convert_webm_to_mp4("input.webm", "output.mp4")
