@@ -35,9 +35,12 @@ opts = {
     "writeautomaticsub": False,
 }
 
-with yt_dlp.YoutubeDL(opts) as ydl:
-    ydl.download(url)
 
+def main():
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        ydl.download(url)
 # Function to convert .webm to .mp4 using venv FFmpeg
+    vidConverter.convert_webm_to_mp4("downloads/input.webm", "downloads/output.mp4", deletesOriginal=True)
 
-vidConverter.convert_webm_to_mp4("downloads/input.webm", "downloads/output.mp4", deletesOriginal=True)
+if __name__ == "main":
+    main()
