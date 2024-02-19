@@ -37,6 +37,9 @@ opts = {
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Download YouTube videos in specified quality.")
+    parser.add_argument("url", type=str, help="YouTube video URL")
+    parser.add_argument("quality", type=str, choices=["1080p", "720p", "480p", "360p", "144p", "audio-only"], help="Desired quality")
     with yt_dlp.YoutubeDL(opts) as ydl:
         ydl.download(url)
 # Function to convert .webm to .mp4 using venv FFmpeg
