@@ -2,7 +2,6 @@ import os
 import yt_dlp
 import subprocess
 import imageio_ffmpeg  # Ensures FFmpeg is available in the venv
-
 url = "https://www.youtube.com/watch?v=sLfAcqbzdco"
 
 # Times in seconds
@@ -30,7 +29,7 @@ with yt_dlp.YoutubeDL(opts) as ydl:
     ydl.download(url)
 
 # Function to convert .webm to .mp4 using venv FFmpeg
-def convert_webm_to_mp4(input_file, output_file):
+def convert_webm_to_mp4(input_file, output_file, deletesOriginal):
     command = [
         ffmpeg_path,        # Use FFmpeg from imageio_ffmpeg
         "-i", input_file,   # Input file
@@ -46,12 +45,13 @@ def convert_webm_to_mp4(input_file, output_file):
     try:
         subprocess.run(command, check=True)
         print(f"✅ Conversion successful: {output_file}")
-        if os.path.exists(input_file):
-            os.remove(input_file)
-            print(f"🗑️ Deleted original file: {input_file}")
-        else:
-            print(f"⚠️ File not found: {input_file}")
+        if deletesOriginal:
+            if os.path.exists(input_file):
+                os.remove(input_file)
+                print(f"🗑️ Deleted original file: {input_file}")
+            else:
+                print(f"⚠️ File not found: {input_file}")
     except subprocess.CalledProcessError as e:
         print(f"❌ FFmpeg error: {e}")
 
-convert_webm_to_mp4("downloads/input.webm", "output.mp4")
+convert_webm_to_mp4("downloads/input.webm", "downloads/output.mp4")
