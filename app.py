@@ -24,7 +24,7 @@ ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
 # Set FFmpeg arguments based on the chosen mode
 ffmpeg_args = {}
 if use_trim:
-    ffmpeg_args = trim_args()
+    ffmpeg_args = trim_args(start,end)
 
 opts = {
     "outtmpl": "downloads/input.webm",
