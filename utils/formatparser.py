@@ -6,9 +6,11 @@ def get_format_option(quality):
     elif quality == "720p":
         return "bestvideo[height<=720]+bestaudio/best"
     elif quality == "480p":
-        return "bestvideo[height<=720]+bestaudio/best"
+        return "bestvideo[height<=480]+bestaudio/best"
+    elif quality == "360p":
+        return "bestvideo[height<=480]+bestaudio/best"
     elif quality == "144p":
-        return "bestvideo[height<=720]+bestaudio/best"
+        return "bestvideo[height<=144]+bestaudio/best"
     elif quality == "audio-only":
         return "bestaudio/best"
     else:
