@@ -29,15 +29,17 @@ def main():
     parser.add_argument("url", type=str, help="YouTube video URL")
     parser.add_argument("directory", type=str, help="Pick directory to download the video into")
     parser.add_argument("quality", type=str, choices=["1080p", "720p", "480p", "360p", "144p", "audio-only"], help="Desired quality")
-    parser.add_argument("start", type=validate_time_format, default="", help="Partial download start time (HH:MM:SS)")
-    parser.add_argument("end", type=validate_time_format, default="", help="Partial download end time (HH:MM:SS)")
+    parser.add_argument("--start", type=validate_time_format, help="Partial download Start time (HH:MM:SS)")
+    parser.add_argument("--end", type=validate_time_format, help="Partial download End time (HH:MM:SS)")
     ffmpeg_args = {}
     args = parser.parse_args()
-    
-    if args.start_time >= args.end_time:
-        parser.error("Start time must be earlier than end time!")
-    if start!= 0:
-        ffmpeg_args = trim_args(args.start,args.end)
+    if args.start is not None and args.end is None:
+        parser.error("if Start time is provided for partial download you must provide the End time")
+    if args.end is not None and args.start is None:
+        parser.error("if End time is provided for partial download you must provide the Start time")
+    if args.end is not None and args.start is not None:
+        if args.start_time >= args.end_time:
+            ffmpeg_args = trim_args(args.start,args.end)
 
 
     vidConverter = converter()
@@ -49,7 +51,7 @@ def main():
     opts = {
         "outtmpl": "downloads/input.webm", #webm seems to be the most comfortable format to be downloaded in 
         "external_downloader": ffmpeg_path,  # Use FFmpeg from venv
-        "external_downloader_args": ffmpeg_args if use_trim else {},
+        "external_downloader_args": ffmpeg_args,
         "format": "bestvideo+bestaudio",
         "writesubtitles": False,
         "writeautomaticsub": False,
