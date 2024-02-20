@@ -7,43 +7,58 @@ from utils.formatparser import get_format_option
 from utils.conversion import converter 
 from utils.trimmer import trim_args
 #change this to become a parsed arg
-url = "https://www.youtube.com/watch?v=sLfAcqbzdco"
-
-# Set whether to trim the video or download the full video
-use_trim = False  # Change to False to download the full video
-
-# Times in seconds (only used if trimming)
-start = "00:04:03"
-end = "00:04:21"
+import datetime
 
 
-vidConverter = converter()
-# Get FFmpeg path from imageio_ffmpeg
-ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+def validate_time_format(time_str):
+    """Validates and converts a time string (hh:mm:ss) to a datetime object."""
+    try:
+        return datetime.datetime.strptime(time_str, "%H:%M:%S").time()
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"Invalid time format: {time_str}. Use HH:MM:SS.")
 
-# Set FFmpeg arguments based on the chosen mode
-ffmpeg_args = {}
-if use_trim:
-    ffmpeg_args = trim_args(start,end)
+# Setup argument parser
+parser = argparse.ArgumentParser(description="Compare two time arguments")
 
-opts = {
-    "outtmpl": "downloads/input.webm",
-    "external_downloader": ffmpeg_path,  # Use FFmpeg from venv
-    "external_downloader_args": ffmpeg_args if use_trim else {},
-    "format": "bestvideo+bestaudio",
-    "writesubtitles": False,
-    "writeautomaticsub": False,
-}
+parser.add_argument("start_time", type=validate_time_format, help="Start time (HH:MM:SS)")
+parser.add_argument("end_time", type=validate_time_format, help="End time (HH:MM:SS)")
 
 
 def main():
     parser = argparse.ArgumentParser(description="Download YouTube videos in specified quality.")
     parser.add_argument("url", type=str, help="YouTube video URL")
+    parser.add_argument("directory", type=str, help="Pick directory to download the video into")
     parser.add_argument("quality", type=str, choices=["1080p", "720p", "480p", "360p", "144p", "audio-only"], help="Desired quality")
+    parser.add_argument("start", type=validate_time_format, default="", help="Partial download start time (HH:MM:SS)")
+    parser.add_argument("end", type=validate_time_format, default="", help="Partial download end time (HH:MM:SS)")
+    ffmpeg_args = {}
+    args = parser.parse_args()
+    
+    if args.start_time >= args.end_time:
+        parser.error("Start time must be earlier than end time!")
+    if start!= 0:
+        ffmpeg_args = trim_args(args.start,args.end)
+
+
+    vidConverter = converter()
+    # Get FFmpeg path from imageio_ffmpeg
+    ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+
+    # Set FFmpeg arguments based on the chosen mode
+
+    opts = {
+        "outtmpl": "downloads/input.webm", #webm seems to be the most comfortable format to be downloaded in 
+        "external_downloader": ffmpeg_path,  # Use FFmpeg from venv
+        "external_downloader_args": ffmpeg_args if use_trim else {},
+        "format": "bestvideo+bestaudio",
+        "writesubtitles": False,
+        "writeautomaticsub": False,
+    }
+
     with yt_dlp.YoutubeDL(opts) as ydl:
         ydl.download(url)
-# Function to convert .webm to .mp4 using venv FFmpeg
-    vidConverter.convert_webm_to_mp4("downloads/input.webm", "downloads/output.mp4", deletesOriginal=True)
+    # Function to convert .webm to .mp4 using venv FFmpeg
+    vidConverter.convert_webm_to_mp4("downloads/input__.webm", "downloads/output.mp4", deletesOriginal=True)
 
 if __name__ == "main":
     main()
