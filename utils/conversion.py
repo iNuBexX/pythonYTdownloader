@@ -8,7 +8,10 @@ ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
 class converter:
     def __init__(self):
         pass
-    def convert_webm_to_mp4(self,input_file, output_file, deletesOriginal):
+    def convert_webm_to_mp4(self,input_file, output_filedir,output_fileName, deletesOriginal):
+        output_dir = os.path.dirname(output_fileName)
+        if output_dir and not os.path.exists(output_dir):
+            os.makedirs(output_dir)
         command = [
             ffmpeg_path,        # Use FFmpeg from imageio_ffmpeg
             "-i", input_file,   # Input file
@@ -18,12 +21,12 @@ class converter:
             "-c:a", "aac",      # Convert audio to AAC
             "-b:a", "128k",     # Set audio bitrate
             "-y",               # Overwrite output if exists
-            output_file
+            output_fileName
         ]
         
         try:
             subprocess.run(command, check=True)
-            print(f"✅ Conversion successful: {output_file}")
+            print(f"✅ Conversion successful: {output_fileName}")
             if deletesOriginal:
                 if os.path.exists(input_file):
                     os.remove(input_file)
