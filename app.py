@@ -39,18 +39,22 @@ def main():
     if args.end is not None and args.start is not None:
         if args.start >= args.end:
             parser.error("Start time must be earlier than end time!")
-
+    if args.end is not None and args.start is not None:
+        ffmpeg_args = trim_args(args.start.strftime("%H:%M:%S"),args.end.strftime("%H:%M:%S"))
     vidConverter = converter()
     # Get FFmpeg path from imageio_ffmpeg
+    args.quality = get_format_option(args.quality)
     ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
     
     # Set FFmpeg arguments based on the chosen mode
 
+    if args.directory[-1]!= "/":
+        args.directory += "/"
     opts = {
         "outtmpl": args.directory+"input.webm", #webm seems to be the most comfortable format to be downloaded in 
         "external_downloader": ffmpeg_path,  # Use FFmpeg from venv
         "external_downloader_args": ffmpeg_args,
-        "format": "bestvideo+bestaudio",
+        "format": args.quality,
         "writesubtitles": False,
         "writeautomaticsub": False,
     }
