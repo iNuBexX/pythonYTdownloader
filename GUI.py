@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QPushButton, QScrollArea, 
     QFrame, QHBoxLayout, QLineEdit, QLabel, QCheckBox, QGridLayout
 )
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QFileSystemWatcher
 import sys
 
 class YouTubeTrimmer(QWidget):
@@ -10,6 +10,12 @@ class YouTubeTrimmer(QWidget):
         super().__init__()
         self.setWindowTitle("YouTube Trimmer Tool")
         self.setGeometry(100, 100, 420, 550)
+
+        # File system watcher to monitor QSS file changes
+        self.qss_watcher = QFileSystemWatcher(self)
+        self.qss_watcher.addPath("style.qss")
+        self.qss_watcher.fileChanged.connect(self.reload_stylesheet)
+
         self.load_stylesheet("style.qss")
         
         layout = QVBoxLayout(self)
@@ -38,6 +44,11 @@ class YouTubeTrimmer(QWidget):
                 self.setStyleSheet(file.read())
         except FileNotFoundError:
             print("Warning: style.qss not found. Using default styling.")
+    
+    def reload_stylesheet(self):
+        """Reload styles when the QSS file changes"""
+        print("Reloading stylesheet...")
+        self.load_stylesheet("style.qss")
         
 class Card(QFrame):
     def __init__(self, parent=None):
