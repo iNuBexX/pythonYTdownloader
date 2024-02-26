@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QPushButton, QScrollArea, 
-    QFrame, QHBoxLayout, QLineEdit, QLabel, QCheckBox, QGridLayout, QComboBox
+    QFrame, QHBoxLayout, QLineEdit, QLabel, QCheckBox, QGridLayout, QComboBox, QFileDialog
 )
 from PyQt6.QtCore import Qt, QFileSystemWatcher
 import sys
@@ -70,10 +70,15 @@ class Card(QFrame):
         top_layout = QHBoxLayout()
         self.url_input = QLineEdit()
         self.url_input.setPlaceholderText("Paste YouTube link here...")
+        
+        self.file_button = QPushButton("Select File")
+        self.file_button.clicked.connect(self.open_file_dialog)
+        
         self.delete_button = QPushButton("X")
         self.delete_button.clicked.connect(self.delete_card)
         
         top_layout.addWidget(self.url_input)
+        top_layout.addWidget(self.file_button)
         top_layout.addWidget(self.delete_button)
         
         self.switch = QCheckBox("Partial")
@@ -97,6 +102,12 @@ class Card(QFrame):
         layout.addLayout(top_layout)
         layout.addWidget(self.switch)
         layout.addWidget(self.partial_fields_widget)
+        
+    def open_file_dialog(self):
+        file_dialog = QFileDialog()
+        file_path, _ = file_dialog.getOpenFileName(self, "Select File", "", "All Files (*.*)")
+        if file_path:
+            self.url_input.setText(file_path)
         
     def toggle_partial_fields(self):
         self.partial_fields_widget.setVisible(self.switch.isChecked())
