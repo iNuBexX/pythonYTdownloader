@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QPushButton, QScrollArea, 
-    QFrame, QHBoxLayout, QLineEdit, QLabel, QCheckBox, QGridLayout
+    QFrame, QHBoxLayout, QLineEdit, QLabel, QCheckBox, QGridLayout, QComboBox
 )
 from PyQt6.QtCore import Qt, QFileSystemWatcher
 import sys
@@ -11,19 +11,22 @@ class YouTubeTrimmer(QWidget):
         self.setWindowTitle("YouTube Trimmer Tool")
         self.setGeometry(100, 100, 420, 550)
 
+        # Theme selection
+        self.theme_selector = QComboBox()
+        self.theme_selector.addItems(["Dark", "Light"])
+        self.theme_selector.currentIndexChanged.connect(self.change_theme)
+        
         # File system watcher to monitor QSS file changes
         self.qss_watcher = QFileSystemWatcher(self)
-        self.qss_watcher.addPath("style.qss")
         self.qss_watcher.fileChanged.connect(self.reload_stylesheet)
-
-        self.load_stylesheet("style.qss")
         
-        layout = QVBoxLayout(self)
+        self.layout = QVBoxLayout(self)
+        self.layout.addWidget(self.theme_selector)
         
         self.add_button = QPushButton("+ Add Card")
         self.add_button.setObjectName("addButton")
         self.add_button.clicked.connect(self.add_card)
-        layout.addWidget(self.add_button)
+        self.layout.addWidget(self.add_button)
         
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
@@ -31,9 +34,11 @@ class YouTubeTrimmer(QWidget):
         self.scroll_layout = QVBoxLayout(self.scroll_content)
         self.scroll_area.setWidget(self.scroll_content)
         
-        layout.addWidget(self.scroll_area)
-        self.setLayout(layout)
+        self.layout.addWidget(self.scroll_area)
+        self.setLayout(self.layout)
         
+        self.change_theme(0)  # Load default theme
+    
     def add_card(self):
         card = Card(self)
         self.scroll_layout.addWidget(card)
@@ -43,12 +48,17 @@ class YouTubeTrimmer(QWidget):
             with open(filename, "r") as file:
                 self.setStyleSheet(file.read())
         except FileNotFoundError:
-            print("Warning: style.qss not found. Using default styling.")
+            print(f"Warning: {filename} not found. Using default styling.")
     
     def reload_stylesheet(self):
         """Reload styles when the QSS file changes"""
         print("Reloading stylesheet...")
-        self.load_stylesheet("style.qss")
+        self.load_stylesheet("style_dark.qss" if self.theme_selector.currentText() == "Dark" else "style_light.qss")
+    
+    def change_theme(self, index):
+        theme = "style_dark.qss" if index == 0 else "style_light.qss"
+        self.qss_watcher.addPath(theme)
+        self.load_stylesheet(theme)
         
 class Card(QFrame):
     def __init__(self, parent=None):

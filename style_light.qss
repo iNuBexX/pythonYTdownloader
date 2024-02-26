@@ -1,0 +1,72 @@
+/* General Styles */
+QWidget {
+    background-color: #f5f5f5;
+    color: #222;
+    font-size: 14px;
+    font-family: Arial, sans-serif;
+}
+
+/* Buttons */
+QPushButton {
+    background-color: #e0e0e0;
+    border: 1px solid #bbb;
+    padding: 8px 12px;
+    border-radius: 5px;
+}
+QPushButton:hover {
+    background-color: #d6d6d6;
+}
+QPushButton#addButton {
+    background-color: #0078d7;
+    color: white;
+    font-weight: bold;
+}
+QPushButton#addButton:hover {
+    background-color: #005a9e;
+}
+
+/* Scroll Area */
+QScrollArea {
+    background-color: #ffffff;
+    border: none;
+}
+
+/* Card Styling */
+QFrame {
+    background-color: #ffffff;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    padding: 10px;
+}
+QLineEdit {
+    background-color: #ffffff;
+    color: #222;
+    border: 1px solid #ccc;
+    padding: 6px;
+    border-radius: 4px;
+}
+QLineEdit:focus {
+    border: 1px solid #0078d7;
+}
+
+/* Checkboxes */
+QCheckBox {
+    color: #222;
+}
+QCheckBox::indicator {
+    width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    background-color: #ddd;
+    border: 1px solid #bbb;
+}
+QCheckBox::indicator:checked {
+    background-color: #0078d7;
+    border: 1px solid #005a9e;
+}
+
+/* Labels */
+QLabel {
+    font-weight: bold;
+    color: #222;
+}

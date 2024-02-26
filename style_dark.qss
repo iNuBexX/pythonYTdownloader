@@ -1,0 +1,56 @@
+QWidget {
+    background-color: #1E1E1E; /* Dark Gray */
+    color: #D0D0D0; /* Light Gray */
+    font-size: 14px;
+}
+
+QPushButton {
+    background-color: #2D2D2D; /* Slightly lighter dark gray */
+    border: 1px solid #3C3C3C;
+    color: #D0D0D0;
+    padding: 6px;
+    border-radius: 5px;
+}
+
+QPushButton:hover {
+    background-color: #3C3C3C;
+}
+
+QPushButton#addButton {
+    background-color: #2A2A2A;
+    font-weight: bold;
+}
+
+QLineEdit {
+    background-color: #2A2A2A;
+    border: 1px solid #3C3C3C;
+    padding: 4px;
+    color: #D0D0D0;
+}
+
+QFrame {
+    background-color: #252525; /* Dark Gray */
+    border: 1px solid #3C3C3C;
+    border-radius: 8px;
+    padding: 8px;
+}
+
+QCheckBox {
+    spacing: 5px;
+}
+
+QCheckBox::indicator {
+    width: 16px;
+    height: 16px;
+    border: 1px solid #D0D0D0;
+    background-color: #2A2A2A;
+}
+
+QCheckBox::indicator:checked {
+    background-color: #0078D7; /* Blue Accent */
+    border: 1px solid #0078D7;
+}
+
+QScrollArea {
+    border: none;
+}
