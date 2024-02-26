@@ -10,7 +10,7 @@ class YouTubeTrimmer(QWidget):
         super().__init__()
         self.setWindowTitle("YouTube Trimmer Tool")
         self.setGeometry(100, 100, 420, 550)
-        self.setStyleSheet(self.get_styles())
+        self.load_stylesheet("style.qss")
         
         layout = QVBoxLayout(self)
         
@@ -32,44 +32,12 @@ class YouTubeTrimmer(QWidget):
         card = Card(self)
         self.scroll_layout.addWidget(card)
     
-    def get_styles(self):
-        return """
-        QWidget {
-            background-color: #f8f9fa;
-            font-family: Arial;
-        }
-        QPushButton#addButton {
-            background-color: #007bff;
-            color: white;
-            padding: 8px;
-            border-radius: 5px;
-            font-size: 14px;
-        }
-        QPushButton#addButton:hover {
-            background-color: #0056b3;
-        }
-        QFrame {
-            background: white;
-            border-radius: 10px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            margin: 5px;
-        }
-        QLineEdit {
-            border: 1px solid #ced4da;
-            border-radius: 5px;
-            padding: 5px;
-        }
-        QPushButton {
-            background-color: #dc3545;
-            color: white;
-            border-radius: 5px;
-            padding: 5px;
-        }
-        QPushButton:hover {
-            background-color: #c82333;
-        }
-        """
+    def load_stylesheet(self, filename):
+        try:
+            with open(filename, "r") as file:
+                self.setStyleSheet(file.read())
+        except FileNotFoundError:
+            print("Warning: style.qss not found. Using default styling.")
         
 class Card(QFrame):
     def __init__(self, parent=None):
