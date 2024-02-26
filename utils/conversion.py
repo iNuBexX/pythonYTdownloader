@@ -12,6 +12,15 @@ class converter:
         output_dir = os.path.dirname(output_fileName)
         if output_dir and not os.path.exists(output_dir):
             os.makedirs(output_dir)
+
+        mkv_file = input_file + ".mkv"
+        webm_file = input_file + ".webm"
+
+        if os.path.exists(mkv_file):
+            input_file = mkv_file
+        elif os.path.exists(webm_file):
+            input_file = webm_file
+        
         command = [
             ffmpeg_path,        # Use FFmpeg from imageio_ffmpeg
             "-i", input_file,   # Input file
@@ -21,7 +30,7 @@ class converter:
             "-c:a", "aac",      # Convert audio to AAC
             "-b:a", "128k",     # Set audio bitrate
             "-y",               # Overwrite output if exists
-            output_fileName,
+            output_filedir+output_fileName,
             "-movflags",
             "+faststart",
             

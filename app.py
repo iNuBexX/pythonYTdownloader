@@ -27,7 +27,7 @@ def main():
     parser = argparse.ArgumentParser(description="Download YouTube videos in specified quality.")
     parser.add_argument("url", type=str, help="YouTube video URL")
     parser.add_argument("directory", type=str, help="Pick directory to download the video into")
-    parser.add_argument("name", type=str, help="output file name", help="Desired quality")
+    parser.add_argument("name", type=str, help="output file name")
     parser.add_argument("quality", type=str, choices=["1080p", "720p", "480p", "360p", "144p", "audio-only"], help="Desired quality")
     parser.add_argument("--start", type=validate_time_format, help="Partial download Start time (HH:MM:SS)")
     parser.add_argument("--end", type=validate_time_format, help="Partial download End time (HH:MM:SS)")
@@ -51,19 +51,20 @@ def main():
 
     if args.directory[-1]!= "/":
         args.directory += "/"
-    opts = {
-        "outtmpl": args.directory+"input.webm", #webm seems to be the most comfortable format to be downloaded in 
+    opts = { #sometimes this mother fker can force the mp4 some time snot
+        "outtmpl": args.directory+"input", #webm seems to be the most comfortable format to be downloaded in 
         "external_downloader": ffmpeg_path,  # Use FFmpeg from venv
         "external_downloader_args": ffmpeg_args,
         "format": args.quality,
         "writesubtitles": False,
         "writeautomaticsub": False,
+        "--merge-output-format": "mp4"
     }
 
     with yt_dlp.YoutubeDL(opts) as ydl:
         ydl.download(args.url)
     # Function to convert .webm to .mp4 using venv FFmpeg
-    vidConverter.convert_webm_to_mp4(args.directory+"input.webm", args.directory,args.name, deletesOriginal=True)
+    vidConverter.convert_webm_to_mp4(args.directory+"input", args.directory,args.name, deletesOriginal=True)
 
 if __name__ == "__main__":
     main()
