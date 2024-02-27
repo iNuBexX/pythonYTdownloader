@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QPushButton, QScrollArea, QFrame,
     QHBoxLayout, QLineEdit, QLabel, QCheckBox, QGridLayout, QComboBox, QFileDialog,
+    QProgressBar
 )
 from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal
 import sys
@@ -60,7 +61,6 @@ theme_styles = {
             background-color: #0078D7;
             border: 2px solid #0078D7;
         }
-
     """
 }
 
@@ -96,7 +96,7 @@ class ConversionThread(QThread):
 class YouTubeTrimmer(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("GQIA YouTube Trimmer Tool")
+        self.setWindowTitle("YouTube Trimmer Tool")
         self.setGeometry(100, 100, 420, 250)
         
         self.last_selected_folder = self.load_last_selected_folder()
@@ -115,7 +115,7 @@ class YouTubeTrimmer(QWidget):
         
         self.setLayout(self.layout)
         
-        # Create an overlay widget to indicate downloading in progress
+        # Create an overlay widget to indicate activity
         self.download_overlay = QWidget(self)
         self.download_overlay.setStyleSheet("background-color: rgba(0, 0, 0, 0.7);")
         self.download_overlay.setGeometry(0, 0, self.width(), self.height())
@@ -126,6 +126,11 @@ class YouTubeTrimmer(QWidget):
         self.downloading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         overlay_layout.addWidget(self.downloading_label)
         overlay_layout.addStretch()
+        # Add a cancel button to the overlay.
+        self.cancel_button = QPushButton("Cancel", self.download_overlay)
+        self.cancel_button.setStyleSheet("font-size: 16px; padding: 6px;")
+        self.cancel_button.clicked.connect(self.cancel_current_download)
+        overlay_layout.addWidget(self.cancel_button, alignment=Qt.AlignmentFlag.AlignCenter)
         self.download_overlay.hide()
     
     def resizeEvent(self, event):
@@ -151,19 +156,26 @@ class YouTubeTrimmer(QWidget):
         self.current_theme = "dark" if self.current_theme == "light" else "light"
         self.setStyleSheet(theme_styles[self.current_theme])
         self.card.setStyleSheet(theme_styles[self.current_theme])
-
+    
     def show_download_overlay(self, text="Downloading..."):
         self.downloading_label.setText(text)
         self.download_overlay.show()
     
     def hide_download_overlay(self):
         self.download_overlay.hide()
+    
+    def cancel_current_download(self):
+        # Call the card's cancel method to terminate any running thread.
+        self.card.cancel_download()
+        self.hide_download_overlay()
 
 class Card(QFrame):
     def __init__(self, parent=None, default_folder=""):
         super().__init__(parent)
         self.setFrameShape(QFrame.Shape.Box)
         self.is_downloading = False
+        self.download_thread = None
+        self.conversion_thread = None
         layout = QVBoxLayout(self)
         
         # Top row: URL and folder selection
@@ -205,7 +217,6 @@ class Card(QFrame):
         self.download_button = QPushButton("Download")
         self.download_button.setVisible(False)
         self.download_button.clicked.connect(self.start_download)
-        
         
         # Add widgets to layout
         layout.addLayout(top_layout)
@@ -260,7 +271,6 @@ class Card(QFrame):
             to_text = self.to_input.text().strip()
             from_valid = self.is_valid_time_format(from_text)
             to_valid = self.is_valid_time_format(to_text)
-            # Ensure "To" is after "From"
             time_valid = from_valid and to_valid and self.convert_to_seconds(to_text) > self.convert_to_seconds(from_text)
             self.download_button.setVisible(url_valid and folder_valid and download_name_valid and time_valid)
         else:
@@ -275,10 +285,8 @@ class Card(QFrame):
             ffmpeg_args = trim_args(self.from_input.text(), self.to_input.text())
         else:
             ffmpeg_args = {}
-        # Use the download name from the input field (default to "input" if empty)
         download_name = self.download_name_input.text().strip() or "input"
         if self.quality_selector.currentText() == "audio-only":
-            # Ensure the output name ends with .wav for audio-only downloads
             out_name = download_name if download_name.endswith(".wav") else download_name + ".wav"
         else:
             out_name = download_name
@@ -286,12 +294,12 @@ class Card(QFrame):
             "outtmpl": os.path.join(self.folder_input.text(), out_name),
             "external_downloader": ffmpeg_path,
             "external_downloader_args": ffmpeg_args,
-            "format":  get_format_option(self.quality_selector.currentText()),
+            "format": get_format_option(self.quality_selector.currentText()),
         }
         url = self.url_input.text().strip()
         
-        # Show the overlay from the parent (main window)
-        self.parent().show_download_overlay()
+        # Show the overlay from the main window with "Downloading..." text
+        self.parent().show_download_overlay("Downloading...")
         
         # Create and start the download thread
         self.download_thread = DownloadThread(url, opts)
@@ -299,25 +307,41 @@ class Card(QFrame):
         self.download_thread.start()
     
     def on_download_finished(self):
-        download_name = self.download_name_input.text().strip() or "input"
-        # If the download name already ends with .mp3 or .wav, skip conversion.
+        # If audio-only is selected, skip conversion.
         if self.quality_selector.currentText() == "audio-only":
-            self.parent().hide_download_overlay()
             self.is_downloading = False
+            self.parent().hide_download_overlay()
             return
+
         self.parent().show_download_overlay("Converting...")
+        download_name = self.download_name_input.text().strip() or "input"
         input_base = os.path.join(self.folder_input.text(), download_name)
         output_fileName = download_name if download_name.endswith(".mp4") else download_name + ".mp4"
         # Create and start the conversion thread.
         self.conversion_thread = ConversionThread(input_base, self.folder_input.text(), output_fileName, deletesOriginal=True)
         self.conversion_thread.conversion_finished.connect(self.on_conversion_finished)
         self.conversion_thread.start()
-
+    
     def on_conversion_finished(self):
         self.is_downloading = False
         # Hide the overlay and reset overlay text
         self.parent().hide_download_overlay()
         self.parent().downloading_label.setText("Downloading...")
+    
+    def cancel_download(self):
+        # If a download thread is running, terminate it.
+        if self.download_thread is not None and self.download_thread.isRunning():
+            self.download_thread.terminate()
+            self.download_thread.wait()
+            self.download_thread = None
+        # Also cancel conversion thread if running.
+        if hasattr(self, "conversion_thread") and self.conversion_thread is not None and self.conversion_thread.isRunning():
+            self.conversion_thread.terminate()
+            self.conversion_thread.wait()
+            self.conversion_thread = None
+        self.is_downloading = False
+        self.parent().hide_download_overlay()
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = YouTubeTrimmer()
