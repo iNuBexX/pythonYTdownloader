@@ -1,64 +1,36 @@
-import os
-import yt_dlp
-import subprocess
-import imageio_ffmpeg  # Ensures FFmpeg is available in the venv
+class DownloadThread(QThread):
+    progress = pyqtSignal(int)
 
-url = "https://www.youtube.com/watch?v=sLfAcqbzdco"
+    def __init__(self, url, directory, name, quality, start=None, end=None):
+        super().__init__()
+        self.url = url
+        self.directory = directory
+        self.name = name
+        self.quality = quality
+        self.start = start
+        self.end = end
 
-# Set whether to trim the video or download the full video
-use_trim = False  # Change to False to download the full video
+    def run(self):
+        opts = {
+            "outtmpl": os.path.join(self.directory, "input"),
+            "format": self.quality,
+            "progress_hooks": [self.progress_hook]  # Attach progress hook
+        }
 
-# Times in seconds (only used if trimming)
-start = "00:04:03"
-end = "00:04:21"
+        if self.start and self.end:
+            opts["external_downloader_args"] = ["-ss", self.start, "-to", self.end]
 
-# Get FFmpeg path from imageio_ffmpeg
-ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            ydl.download([self.url])
 
-# Set FFmpeg arguments based on the chosen mode
-ffmpeg_args = {}
-if use_trim:
-    ffmpeg_args = {
-        "ffmpeg_i": ["-ss", str(start), "-to", str(end)],
-        "ffmpeg_o": ["-to", str(end), "-c:v", "copy", "-c:a", "copy"]  # Ensure both video & audio are copied
-    }
+    def progress_hook(self, d):
+        """Handles progress updates from yt_dlp."""
+        if d["status"] == "downloading":
+            total_bytes = d.get("total_bytes", None) or d.get("total_bytes_estimate", None)
+            downloaded_bytes = d.get("downloaded_bytes", 0)
+            if total_bytes:
+                progress_percentage = int((downloaded_bytes / total_bytes) * 100)
+                self.progress.emit(progress_percentage)  # Update UI progress bar
 
-opts = {
-    "outtmpl": "downloads/input.webm",
-    "external_downloader": ffmpeg_path,  # Use FFmpeg from venv
-    "external_downloader_args": ffmpeg_args if use_trim else {},
-    "format": "bestvideo+bestaudio",
-    "writesubtitles": False,
-    "writeautomaticsub": False,
-}
-
-with yt_dlp.YoutubeDL(opts) as ydl:
-    ydl.download(url)
-
-# Function to convert .webm to .mp4 using venv FFmpeg
-def convert_webm_to_mp4(input_file, output_file, deletesOriginal):
-    command = [
-        ffmpeg_path,        # Use FFmpeg from imageio_ffmpeg
-        "-i", input_file,   # Input file
-        "-c:v", "libx264",  # Encode video with H.264 (MP4-compatible)
-        "-preset", "slow",  # Higher quality compression
-        "-crf", "22",       # Constant Rate Factor (lower = better quality)
-        "-c:a", "aac",      # Convert audio to AAC
-        "-b:a", "128k",     # Set audio bitrate
-        "-y",               # Overwrite output if exists
-        output_file
-    ]
-    
-    try:
-        subprocess.run(command, check=True)
-        print(f"✅ Conversion successful: {output_file}")
-        if deletesOriginal:
-            if os.path.exists(input_file):
-                os.remove(input_file)
-                print(f"🗑️ Deleted original file: {input_file}")
-            else:
-                print(f"⚠️ File not found: {input_file}")
-    except subprocess.CalledProcessError as e:
-        print(f"❌ FFmpeg error: {e}")
-
-convert_webm_to_mp4("downloads/input.webm", "downloads/output.mp4", deletesOriginal=True)
+        elif d["status"] == "finished":
+            self.progress.emit(100)  # Mark as complete

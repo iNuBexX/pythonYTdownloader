@@ -1,13 +1,17 @@
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QPushButton, QScrollArea, 
-    QFrame, QHBoxLayout, QLineEdit, QLabel, QCheckBox, QGridLayout, QComboBox, QFileDialog
+    QFrame, QHBoxLayout, QLineEdit, QLabel, QCheckBox, QGridLayout, QComboBox, QFileDialog, QProgressBar
 )
-from PyQt6.QtCore import Qt, QFileSystemWatcher
+from PyQt6.QtCore import Qt, QFileSystemWatcher, pyqtSignal, QThread
 import sys
 import os
 import json
+import re
 
 SETTINGS_FILE = "settings.json"
+
+def is_valid_time_format(time_str):
+    return re.match(r"^\d{2}:\d{2}:\d{2}$", time_str) is not None
 
 class YouTubeTrimmer(QWidget):
     def __init__(self):
@@ -15,14 +19,12 @@ class YouTubeTrimmer(QWidget):
         self.setWindowTitle("YouTube Trimmer Tool")
         self.setGeometry(100, 100, 420, 550)
         
-        self.last_selected_folder = self.load_last_selected_folder()  # Store the last selected folder
+        self.last_selected_folder = self.load_last_selected_folder()
 
-        # Theme selection
         self.theme_selector = QComboBox()
         self.theme_selector.addItems(["Dark", "Light"])
         self.theme_selector.currentIndexChanged.connect(self.change_theme)
         
-        # File system watcher to monitor QSS file changes
         self.qss_watcher = QFileSystemWatcher(self)
         self.qss_watcher.fileChanged.connect(self.reload_stylesheet)
         
@@ -43,17 +45,15 @@ class YouTubeTrimmer(QWidget):
         self.layout.addWidget(self.scroll_area)
         self.setLayout(self.layout)
         
-        self.change_theme(0)  # Load default theme
+        self.change_theme(0)
     
     def get_default_download_folder(self):
-        """Returns the default downloads folder for both Windows and Linux"""
         if sys.platform == "win32":
             return os.path.join(os.path.expanduser("~"), "Downloads")
         else:
             return os.path.join(os.path.expanduser("~"), "Downloads")
     
     def load_last_selected_folder(self):
-        """Load the last selected folder from a settings file"""
         if os.path.exists(SETTINGS_FILE):
             try:
                 with open(SETTINGS_FILE, "r") as file:
@@ -64,7 +64,6 @@ class YouTubeTrimmer(QWidget):
         return self.get_default_download_folder()
     
     def save_last_selected_folder(self):
-        """Save the last selected folder to a settings file"""
         with open(SETTINGS_FILE, "w") as file:
             json.dump({"last_selected_folder": self.last_selected_folder}, file)
     
@@ -80,7 +79,6 @@ class YouTubeTrimmer(QWidget):
             print(f"Warning: {filename} not found. Using default styling.")
     
     def reload_stylesheet(self):
-        """Reload styles when the QSS file changes"""
         print("Reloading stylesheet...")
         self.load_stylesheet("style_dark.qss" if self.theme_selector.currentText() == "Dark" else "style_light.qss")
     
@@ -93,7 +91,7 @@ class Card(QFrame):
     def __init__(self, parent=None, default_folder=""):
         super().__init__(parent)
         self.setFrameShape(QFrame.Shape.Box)
-        self.parent = parent  # Store reference to main window
+        self.parent = parent  
         
         layout = QVBoxLayout(self)
         
@@ -137,25 +135,69 @@ class Card(QFrame):
         self.partial_fields_widget.setLayout(self.partial_fields)
         self.partial_fields_widget.setVisible(False)
         
+        self.download_button = QPushButton("Download")
+        self.download_button.setVisible(False)
+
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setValue(0)
+        self.progress_bar.setVisible(False)
+
+        top_layout.addWidget(self.url_input)
+        layout.addLayout(top_layout)
+        layout.addWidget(self.download_button)
+        layout.addWidget(self.progress_bar)
+        
+        self.url_input.textChanged.connect(self.update_download_button)
+        self.switch.stateChanged.connect(self.update_download_button)
+        self.from_input.textChanged.connect(self.update_download_button)
+        self.to_input.textChanged.connect(self.update_download_button)
+        
         layout.addLayout(top_layout)
         layout.addWidget(self.switch)
         layout.addWidget(self.partial_fields_widget)
-        
+        layout.addWidget(self.download_button)
+    
     def open_folder_dialog(self):
         folder_dialog = QFileDialog()
         folder_path = folder_dialog.getExistingDirectory(self, "Select Folder")
         if folder_path:
             self.folder_input.setText(folder_path)
-            self.parent.last_selected_folder = folder_path  # Update last selected folder in main window
-            self.parent.save_last_selected_folder()  # Persist folder selection
-        
+            self.parent.last_selected_folder = folder_path  
+            self.parent.save_last_selected_folder()  
+    
     def toggle_partial_fields(self):
         self.partial_fields_widget.setVisible(self.switch.isChecked())
+        self.update_download_button()
+    
+    def update_download_button(self):
+        url_valid = bool(self.url_input.text().strip())
+        folder_valid = bool(self.folder_input.text().strip())
         
+        if self.switch.isChecked():
+            from_valid = is_valid_time_format(self.from_input.text())
+            to_valid = is_valid_time_format(self.to_input.text())
+            self.download_button.setVisible(url_valid and folder_valid and from_valid and to_valid)
+        else:
+            self.download_button.setVisible(url_valid and folder_valid)
+    
+    def start_download(self):
+        url = self.url_input.text().strip()
+        if not url:
+            return
+        
+        self.progress_bar.setVisible(True)
+        self.progress_bar.setValue(0)
+
+        self.thread = DownloadThread(url)
+        self.thread.progress.connect(self.progress_bar.setValue)
+        self.thread.start()
+    
     def delete_card(self):
         self.setParent(None)
         self.deleteLater()
         
+
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = YouTubeTrimmer()
