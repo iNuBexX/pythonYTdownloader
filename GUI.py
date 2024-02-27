@@ -4,12 +4,15 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QFileSystemWatcher
 import sys
+import os
 
 class YouTubeTrimmer(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("YouTube Trimmer Tool")
         self.setGeometry(100, 100, 420, 550)
+        
+        self.last_selected_folder = self.get_default_download_folder()  # Store the last selected folder
 
         # Theme selection
         self.theme_selector = QComboBox()
@@ -39,8 +42,15 @@ class YouTubeTrimmer(QWidget):
         
         self.change_theme(0)  # Load default theme
     
+    def get_default_download_folder(self):
+        """Returns the default downloads folder for both Windows and Linux"""
+        if sys.platform == "win32":
+            return os.path.join(os.path.expanduser("~"), "Downloads")
+        else:
+            return os.path.join(os.path.expanduser("~"), "Downloads")
+    
     def add_card(self):
-        card = Card(self)
+        card = Card(self, self.last_selected_folder)
         self.scroll_layout.addWidget(card)
     
     def load_stylesheet(self, filename):
@@ -61,9 +71,10 @@ class YouTubeTrimmer(QWidget):
         self.load_stylesheet(theme)
         
 class Card(QFrame):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, default_folder=""):
         super().__init__(parent)
         self.setFrameShape(QFrame.Shape.Box)
+        self.parent = parent  # Store reference to main window
         
         layout = QVBoxLayout(self)
         
@@ -71,14 +82,22 @@ class Card(QFrame):
         self.url_input = QLineEdit()
         self.url_input.setPlaceholderText("Paste YouTube link here...")
         
-        self.file_button = QPushButton("Select File")
-        self.file_button.clicked.connect(self.open_file_dialog)
+        self.folder_input = QLineEdit()
+        self.folder_input.setPlaceholderText("Selected folder...")
+        self.folder_input.setReadOnly(True)
+        
+        if default_folder:
+            self.folder_input.setText(default_folder)
+        
+        self.folder_button = QPushButton("Select Folder")
+        self.folder_button.clicked.connect(self.open_folder_dialog)
         
         self.delete_button = QPushButton("X")
         self.delete_button.clicked.connect(self.delete_card)
         
         top_layout.addWidget(self.url_input)
-        top_layout.addWidget(self.file_button)
+        top_layout.addWidget(self.folder_input)
+        top_layout.addWidget(self.folder_button)
         top_layout.addWidget(self.delete_button)
         
         self.switch = QCheckBox("Partial")
@@ -103,11 +122,12 @@ class Card(QFrame):
         layout.addWidget(self.switch)
         layout.addWidget(self.partial_fields_widget)
         
-    def open_file_dialog(self):
-        file_dialog = QFileDialog()
-        file_path, _ = file_dialog.getOpenFileName(self, "Select File", "", "All Files (*.*)")
-        if file_path:
-            self.url_input.setText(file_path)
+    def open_folder_dialog(self):
+        folder_dialog = QFileDialog()
+        folder_path = folder_dialog.getExistingDirectory(self, "Select Folder")
+        if folder_path:
+            self.folder_input.setText(folder_path)
+            self.parent.last_selected_folder = folder_path  # Update last selected folder in main window
         
     def toggle_partial_fields(self):
         self.partial_fields_widget.setVisible(self.switch.isChecked())
