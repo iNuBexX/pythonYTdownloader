@@ -5,6 +5,9 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QFileSystemWatcher
 import sys
 import os
+import json
+
+SETTINGS_FILE = "settings.json"
 
 class YouTubeTrimmer(QWidget):
     def __init__(self):
@@ -12,7 +15,7 @@ class YouTubeTrimmer(QWidget):
         self.setWindowTitle("YouTube Trimmer Tool")
         self.setGeometry(100, 100, 420, 550)
         
-        self.last_selected_folder = self.get_default_download_folder()  # Store the last selected folder
+        self.last_selected_folder = self.load_last_selected_folder()  # Store the last selected folder
 
         # Theme selection
         self.theme_selector = QComboBox()
@@ -48,6 +51,22 @@ class YouTubeTrimmer(QWidget):
             return os.path.join(os.path.expanduser("~"), "Downloads")
         else:
             return os.path.join(os.path.expanduser("~"), "Downloads")
+    
+    def load_last_selected_folder(self):
+        """Load the last selected folder from a settings file"""
+        if os.path.exists(SETTINGS_FILE):
+            try:
+                with open(SETTINGS_FILE, "r") as file:
+                    settings = json.load(file)
+                    return settings.get("last_selected_folder", self.get_default_download_folder())
+            except (json.JSONDecodeError, FileNotFoundError):
+                pass
+        return self.get_default_download_folder()
+    
+    def save_last_selected_folder(self):
+        """Save the last selected folder to a settings file"""
+        with open(SETTINGS_FILE, "w") as file:
+            json.dump({"last_selected_folder": self.last_selected_folder}, file)
     
     def add_card(self):
         card = Card(self, self.last_selected_folder)
@@ -128,6 +147,7 @@ class Card(QFrame):
         if folder_path:
             self.folder_input.setText(folder_path)
             self.parent.last_selected_folder = folder_path  # Update last selected folder in main window
+            self.parent.save_last_selected_folder()  # Persist folder selection
         
     def toggle_partial_fields(self):
         self.partial_fields_widget.setVisible(self.switch.isChecked())
