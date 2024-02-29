@@ -1,10 +1,14 @@
-from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QScrollArea, QFrame, QHBoxLayout, QLineEdit, QLabel, QCheckBox, QGridLayout, QComboBox, QFileDialog, QProgressBar
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtWidgets import (
+    QApplication, QWidget, QVBoxLayout, QPushButton, QScrollArea, QFrame,
+    QHBoxLayout, QLineEdit, QLabel, QCheckBox, QGridLayout, QComboBox, QFileDialog, QProgressBar
+)
+from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal
 import sys
 import os
 import json
 import yt_dlp
 import imageio_ffmpeg  # Ensures FFmpeg is available in the venv
+import re
 from utils.trimmer import trim_args
 
 ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
@@ -14,8 +18,8 @@ theme_styles = {
     "light": "",
     "dark": """
         QWidget {
-            background-color: #1E1E1E; /* Dark Gray */
-            color: #D0D0D0; /* Light Gray */
+            background-color: #1E1E1E;
+            color: #D0D0D0;
             font-size: 14px;
         }
         QPushButton {
@@ -41,7 +45,6 @@ theme_styles = {
             border: 2px solid #444;
             border-radius: 10px;
             padding: 12px;
-            box-shadow: 2px 2px 6px #000;
         }
         QCheckBox::indicator {
             width: 18px;
@@ -66,6 +69,20 @@ theme_styles = {
     """
 }
 
+# Worker thread for downloading
+class DownloadThread(QThread):
+    download_finished = pyqtSignal()
+    
+    def __init__(self, url, opts, parent=None):
+        super().__init__(parent)
+        self.url = url
+        self.opts = opts
+        
+    def run(self):
+        with yt_dlp.YoutubeDL(self.opts) as ydl:
+            ydl.download([self.url])
+        self.download_finished.emit()
+
 class YouTubeTrimmer(QWidget):
     def __init__(self):
         super().__init__()
@@ -87,6 +104,23 @@ class YouTubeTrimmer(QWidget):
         self.layout.addWidget(self.theme_switcher)
         
         self.setLayout(self.layout)
+        
+        # Create an overlay widget to indicate downloading in progress
+        self.download_overlay = QWidget(self)
+        self.download_overlay.setStyleSheet("background-color: rgba(0, 0, 0, 0.7);")
+        self.download_overlay.setGeometry(0, 0, self.width(), self.height())
+        overlay_layout = QVBoxLayout(self.download_overlay)
+        overlay_layout.addStretch()
+        self.downloading_label = QLabel("Downloading...", self.download_overlay)
+        self.downloading_label.setStyleSheet("font-size: 20px; color: white;")
+        self.downloading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        overlay_layout.addWidget(self.downloading_label)
+        overlay_layout.addStretch()
+        self.download_overlay.hide()
+    
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.download_overlay.setGeometry(0, 0, self.width(), self.height())
     
     def load_last_selected_folder(self):
         if os.path.exists(SETTINGS_FILE):
@@ -98,10 +132,21 @@ class YouTubeTrimmer(QWidget):
                 pass
         return os.path.expanduser("~/Downloads")
     
+    def save_last_selected_folder(self, folder):
+        settings = {"last_selected_folder": folder}
+        with open(SETTINGS_FILE, "w") as file:
+            json.dump(settings, file)
+    
     def toggle_theme(self):
         self.current_theme = "dark" if self.current_theme == "light" else "light"
         self.setStyleSheet(theme_styles[self.current_theme])
         self.card.setStyleSheet(theme_styles[self.current_theme])
+    
+    def show_download_overlay(self):
+        self.download_overlay.show()
+    
+    def hide_download_overlay(self):
+        self.download_overlay.hide()
 
 class Card(QFrame):
     def __init__(self, parent=None, default_folder=""):
@@ -158,12 +203,17 @@ class Card(QFrame):
         
         self.url_input.textChanged.connect(self.update_download_button)
         self.switch.stateChanged.connect(self.update_download_button)
-        
+        self.from_input.textChanged.connect(self.update_download_button)
+        self.to_input.textChanged.connect(self.update_download_button)
+    
     def open_folder_dialog(self):
         folder_dialog = QFileDialog()
         folder_path = folder_dialog.getExistingDirectory(self, "Select Folder")
         if folder_path:
             self.folder_input.setText(folder_path)
+            # Update the main window's last folder and save it
+            self.parent().last_selected_folder = folder_path
+            self.parent().save_last_selected_folder(folder_path)
     
     def toggle_partial_fields(self):
         checked = self.switch.isChecked()
@@ -171,10 +221,32 @@ class Card(QFrame):
         self.to_input.setVisible(checked)
         self.update_download_button()
     
+    def is_valid_time_format(self, time_str):
+        """Check if time_str is in hh:mm:ss or mm:ss format."""
+        return bool(re.fullmatch(r'(\d{1,2}:)?\d{1,2}:\d{2}', time_str))
+    
+    def convert_to_seconds(self, time_str):
+        """Convert hh:mm:ss or mm:ss to total seconds for comparison."""
+        parts = list(map(int, time_str.split(":")))
+        if len(parts) == 3:
+            return parts[0] * 3600 + parts[1] * 60 + parts[2]
+        elif len(parts) == 2:
+            return parts[0] * 60 + parts[1]
+        return 0
+    
     def update_download_button(self):
         url_valid = bool(self.url_input.text().strip())
         folder_valid = bool(self.folder_input.text().strip())
-        self.download_button.setVisible(url_valid and folder_valid)
+        if self.switch.isChecked():
+            from_text = self.from_input.text().strip()
+            to_text = self.to_input.text().strip()
+            from_valid = self.is_valid_time_format(from_text)
+            to_valid = self.is_valid_time_format(to_text)
+            # Ensure "To" is after "From"
+            time_valid = from_valid and to_valid and self.convert_to_seconds(to_text) > self.convert_to_seconds(from_text)
+            self.download_button.setVisible(url_valid and folder_valid and time_valid)
+        else:
+            self.download_button.setVisible(url_valid and folder_valid)
     
     def start_download(self):
         if self.is_downloading:
@@ -182,18 +254,33 @@ class Card(QFrame):
         self.is_downloading = True
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
+        
+        ffmpeg_args = trim_args(self.from_input.text(), self.to_input.text())
         opts = {
             "outtmpl": os.path.join(self.folder_input.text(), "input"),
             "external_downloader": ffmpeg_path,
+            "external_downloader_args": ffmpeg_args,
             "format": "bestvideo[height<=" + self.quality_selector.currentText()[:-1] + "]+bestaudio/best",
         }
         url = self.url_input.text().strip()
-        with yt_dlp.YoutubeDL(opts) as ydl:
-            ydl.download(url)
+        
+        # Show the overlay from the parent (main window)
+        self.parent().show_download_overlay()
+        
+        # Create and start the download thread
+        self.download_thread = DownloadThread(url, opts)
+        self.download_thread.download_finished.connect(self.on_download_finished)
+        self.download_thread.start()
+    
+    def on_download_finished(self):
         self.is_downloading = False
         self.progress_bar.setValue(100)
         self.progress_bar.setVisible(False)
+        # Hide the overlay in the main window
+        self.parent().hide_download_overlay()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = YouT
+    window = YouTubeTrimmer()
+    window.show()
+    sys.exit(app.exec())

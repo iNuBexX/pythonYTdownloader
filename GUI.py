@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QPushButton, QScrollArea, 
     QFrame, QHBoxLayout, QLineEdit, QLabel, QCheckBox, QGridLayout, QComboBox, QFileDialog, QProgressBar
 )
-from PyQt6.QtCore import Qt, QFileSystemWatcher, pyqtSignal, QThread
+from PyQt6.QtCore import Qt, QFileSystemWatcher, pyqtSignal, QThread, QTimer
 import sys
 import os
 import json
@@ -33,6 +33,12 @@ class YouTubeTrimmer(QWidget):
         
         self.layout = QVBoxLayout(self)
         self.layout.addWidget(self.theme_selector)
+        
+        # Add the Download All button
+        self.download_all_button = QPushButton("Download All")
+        self.download_all_button.setVisible(False)  # Initially hidden
+        self.download_all_button.clicked.connect(self.download_all)
+        self.layout.addWidget(self.download_all_button)
         
         self.add_button = QPushButton("+ Add Video")
         self.add_button.setObjectName("addButton")
@@ -72,9 +78,41 @@ class YouTubeTrimmer(QWidget):
     
     def add_card(self):
         card = Card(self, self.last_selected_folder)
-        card.parentTrimmer = self
         self.scroll_layout.addWidget(card)
-    
+        self.check_download_all_visibility()
+    def check_download_all_visibility(self):
+        # Show the Download All button if there are more than one card
+        if self.scroll_layout.count() > 1:  # Count the number of cards
+            self.download_all_button.setVisible(True)
+        else:
+            self.download_all_button.setVisible(False)
+    def download_all(self):
+        # Iterate through all the cards and start their downloads
+        for i in range(self.scroll_layout.count()):
+            card = self.scroll_layout.itemAt(i).widget()
+            if isinstance(card, Card) and card.download_button.isVisible():
+                all_valid = True
+                self.process_download(card, i)
+                break  # Stop after starting one download
+        
+        if not all_valid:
+            print("No valid cards found for download.")
+    def process_download(self, card, index):
+        card.start_download()
+        card.download_button.setEnabled(False)  # Disable the button during download
+        self.monitor_download(card, index)
+
+    def monitor_download(self, card, index):
+        if card.is_downloading():  # Check if the download is still in progress
+            QTimer.singleShot(1000, lambda: self.monitor_download(card, index))
+        else:
+            card.download_button.setEnabled(True)  # Re-enable button after completion
+            next_index = index + 1
+            if next_index < self.scroll_layout.count():
+                next_card = self.scroll_layout.itemAt(next_index).widget()
+                if isinstance(next_card, Card) and next_card.download_button.isVisible():
+                    self.process_download(next_card, next_index)          
+
     def load_stylesheet(self, filename):
         try:
             with open(filename, "r") as file:
@@ -90,13 +128,15 @@ class YouTubeTrimmer(QWidget):
         theme = "style_dark.qss" if index == 0 else "style_light.qss"
         self.qss_watcher.addPath(theme)
         self.load_stylesheet(theme)
-        
+
+#!region
+    
 class Card(QFrame):
     def __init__(self, parent=None, default_folder=""):
         super().__init__(parent)
         self.setFrameShape(QFrame.Shape.Box)
         self.parent = parent  
-        
+        self.is_downloading = False
         layout = QVBoxLayout(self)
         
         top_layout = QHBoxLayout()
@@ -185,6 +225,8 @@ class Card(QFrame):
             self.download_button.setVisible(url_valid and folder_valid)
     
     def start_download(self):
+        if self.is_downloading:
+            return
         ffmpeg_args = trim_args(self.from_input.text(),self.to_input.text())
         print("folder to download into",self.folder_input.text())
         opts = { #sometimes this mother fker can force the mp4 some time snot
@@ -207,14 +249,20 @@ class Card(QFrame):
             global isDownloading 
             isDownloading = True
             ydl.download(url)
-        
-        self.progress_bar.setVisible(True)
-        self.progress_bar.setValue(0)
+        self.is_downloading = False
+
 
     
     def delete_card(self):
-        self.setParent(None)
+        parent_layout = self.parent.scroll_layout
+        parent_layout.removeWidget(self)
+        
+        # Delete this card widget
         self.deleteLater()
+        
+        # Update the visibility of the Download All button
+        self.parent.check_download_all_visibility()
+            
         
 if __name__ == "__main__":
     app = QApplication(sys.argv)
