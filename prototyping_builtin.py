@@ -1,57 +1,25 @@
-import os
-import yt_dlp
-import subprocess
-import imageio_ffmpeg  # Ensures FFmpeg is available in the venv
-url = "https://www.youtube.com/watch?v=sLfAcqbzdco"
 
-# Times in seconds
-start = "00:04:03"
-end = "00:04:21"
+class DownloadThread(QThread):
+    progress = pyqtSignal(int)  # Signal to update the progress bar
 
-# Get FFmpeg path from imageio_ffmpeg
-ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+    def __init__(self, url):
+        super().__init__()
+        self.url = url
 
-ffmpeg_args = {
-    "ffmpeg_i": ["-ss", str(start), "-to", str(end)],
-    "ffmpeg_o": ["-to", str(end), "-c:v", "copy", "-c:a", "copy"]  # Ensure both video & audio are copied
-}
+    def run(self):
+        def progress_hook(d):
+            if d['status'] == 'downloading':
+                downloaded = d.get('_downloaded_bytes', 0)
+                total = d.get('total_bytes', d.get('total_bytes_estimate', 1))
+                percentage = int((downloaded / total) * 100) if total else 0
+                self.progress.emit(percentage)
 
-opts = {
-    "outtmpl": "downloads/input.webm",
-    "external_downloader": ffmpeg_path,  # Use FFmpeg from venv
-    "external_downloader_args": ffmpeg_args,
-    "format": "bestvideo+bestaudio",
-    "writesubtitles": False,
-    "writeautomaticsub": False,
-}
+            elif d['status'] == 'finished':
+                self.progress.emit(100)  # Mark as complete
 
-with yt_dlp.YoutubeDL(opts) as ydl:
-    ydl.download(url)
+        ydl_opts = {'progress_hooks': [progress_hook]}
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download(self.url)
 
-# Function to convert .webm to .mp4 using venv FFmpeg
-def convert_webm_to_mp4(input_file, output_file, deletesOriginal):
-    command = [
-        ffmpeg_path,        # Use FFmpeg from imageio_ffmpeg
-        "-i", input_file,   # Input file
-        "-c:v", "libx264",  # Encode video with H.264 (MP4-compatible)
-        "-preset", "slow",  # Higher quality compression
-        "-crf", "22",       # Constant Rate Factor (lower = better quality)
-        "-c:a", "aac",      # Convert audio to AAC
-        "-b:a", "128k",     # Set audio bitrate
-        "-y",               # Overwrite output if exists
-        output_file
-    ]
-    
-    try:
-        subprocess.run(command, check=True)
-        print(f"✅ Conversion successful: {output_file}")
-        if deletesOriginal:
-            if os.path.exists(input_file):
-                os.remove(input_file)
-                print(f"🗑️ Deleted original file: {input_file}")
-            else:
-                print(f"⚠️ File not found: {input_file}")
-    except subprocess.CalledProcessError as e:
-        print(f"❌ FFmpeg error: {e}")
 
-convert_webm_to_mp4("downloads/input.webm", "downloads/output.mp4")
+

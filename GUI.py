@@ -7,9 +7,12 @@ import sys
 import os
 import json
 import re
-
+import yt_dlp
+import imageio_ffmpeg  # Ensures FFmpeg is available in the venv
+from utils.trimmer import trim_args
+ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
 SETTINGS_FILE = "settings.json"
-
+isDownloading = False
 def is_valid_time_format(time_str):
     return re.match(r"^\d{2}:\d{2}:\d{2}$", time_str) is not None
 
@@ -31,7 +34,7 @@ class YouTubeTrimmer(QWidget):
         self.layout = QVBoxLayout(self)
         self.layout.addWidget(self.theme_selector)
         
-        self.add_button = QPushButton("+ Add Card")
+        self.add_button = QPushButton("+ Add Video")
         self.add_button.setObjectName("addButton")
         self.add_button.clicked.connect(self.add_card)
         self.layout.addWidget(self.add_button)
@@ -69,6 +72,7 @@ class YouTubeTrimmer(QWidget):
     
     def add_card(self):
         card = Card(self, self.last_selected_folder)
+        card.parentTrimmer = self
         self.scroll_layout.addWidget(card)
     
     def load_stylesheet(self, filename):
@@ -119,6 +123,8 @@ class Card(QFrame):
         
         self.switch = QCheckBox("Partial")
         self.switch.stateChanged.connect(self.toggle_partial_fields)
+        self.quality_selector = QComboBox()
+        self.quality_selector.addItems(["1080p", "720p", "480p", "360p", "240p", "144p"])
         
         self.partial_fields = QGridLayout()
         self.from_label = QLabel("From:")
@@ -137,22 +143,20 @@ class Card(QFrame):
         
         self.download_button = QPushButton("Download")
         self.download_button.setVisible(False)
-
+        self.download_button.clicked.connect(self.start_download)
         self.progress_bar = QProgressBar()
         self.progress_bar.setValue(0)
         self.progress_bar.setVisible(False)
 
-        top_layout.addWidget(self.url_input)
         layout.addLayout(top_layout)
         layout.addWidget(self.download_button)
         layout.addWidget(self.progress_bar)
-        
+        layout.addWidget(self.quality_selector)
+
         self.url_input.textChanged.connect(self.update_download_button)
         self.switch.stateChanged.connect(self.update_download_button)
         self.from_input.textChanged.connect(self.update_download_button)
         self.to_input.textChanged.connect(self.update_download_button)
-        
-        layout.addLayout(top_layout)
         layout.addWidget(self.switch)
         layout.addWidget(self.partial_fields_widget)
         layout.addWidget(self.download_button)
@@ -181,23 +185,37 @@ class Card(QFrame):
             self.download_button.setVisible(url_valid and folder_valid)
     
     def start_download(self):
+        ffmpeg_args = trim_args(self.from_input.text(),self.to_input.text())
+        print("folder to download into",self.folder_input.text())
+        opts = { #sometimes this mother fker can force the mp4 some time snot
+            "outtmpl": self.folder_input.text() +"input", #webm seems to be the most comfortable format to be downloaded in 
+            "external_downloader": ffmpeg_path,  # Use FFmpeg from venv
+            "external_downloader_args": ffmpeg_args,
+            "format": "bestvideo[height<="+self.quality_selector.currentText()[:-1]+"]+bestaudio/best",
+            "writesubtitles": False,
+            "writeautomaticsub": False,
+            "--merge-output-format": "mp4",
+            #lets keep it non quite for now
+            #"quiet": True,  # Suppresses output  
+            #"nocheckcertificate": True,  # Avoids SSL warnings  
+            #"ignoreerrors": True  # Prevents it from stopping on minor errors  
+        }
         url = self.url_input.text().strip()
         if not url:
             return
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            global isDownloading 
+            isDownloading = True
+            ydl.download(url)
         
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
 
-        self.thread = DownloadThread(url)
-        self.thread.progress.connect(self.progress_bar.setValue)
-        self.thread.start()
     
     def delete_card(self):
         self.setParent(None)
         self.deleteLater()
         
-
-
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = YouTubeTrimmer()
