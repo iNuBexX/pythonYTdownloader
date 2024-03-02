@@ -1,8 +1,8 @@
 from PyQt6.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QPushButton, QScrollArea, QFrame,
-    QHBoxLayout, QLineEdit, QLabel, QCheckBox, QGridLayout, QComboBox, QFileDialog,
+    QApplication, QWidget, QVBoxLayout, QPushButton, QFrame,
+    QHBoxLayout, QLineEdit, QLabel, QCheckBox, QComboBox, QFileDialog,
 )
-from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal
+from PyQt6.QtCore import Qt, QThread, pyqtSignal
 import sys
 import os
 import json
