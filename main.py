@@ -3,7 +3,9 @@ from PyQt6.QtWidgets import (
     QHBoxLayout, QLineEdit, QLabel, QCheckBox, QComboBox, QFileDialog,
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtGui import QIcon
 import sys
+import ctypes
 import os
 import json
 import yt_dlp
@@ -116,6 +118,8 @@ class ConversionThread(QThread):
         except Exception as e:
             dump_all_files(traceback.format_exc(), ".", self.ui_state)
         self.conversion_finished.emit()
+
+
 
 class YouTubeTrimmer(QWidget):
     def __init__(self):
@@ -382,7 +386,9 @@ class Card(QFrame):
         self.parent().hide_download_overlay()
 
 if __name__ == "__main__":
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("mycompany.myapp")
     app = QApplication(sys.argv)
+    app.setWindowIcon(QIcon("yttrimmerIcon.ico"))  # Set the app icon
     window = YouTubeTrimmer()
     window.show()
     sys.exit(app.exec())
