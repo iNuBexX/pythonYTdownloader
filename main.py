@@ -223,7 +223,7 @@ class Card(QFrame):
         
         # Additional fields: quality and download name
         self.quality_selector = QComboBox()
-        self.quality_selector.addItems(["1080p", "720p", "480p", "360p", "240p", "144p", "audio-only"])
+        self.quality_selector.addItems(["4320p", "2160p", "1440p","1080p", "720p", "480p", "360p", "240p", "144p", "audio-only"])
         
         self.download_name_input = QLineEdit()
         self.download_name_input.setPlaceholderText("Download under name:")
@@ -322,10 +322,7 @@ class Card(QFrame):
             return
         self.is_downloading = True
 
-        if self.switch.isChecked():
-            ffmpeg_args = trim_args(self.from_input.text(), self.to_input.text())
-        else:
-            ffmpeg_args = {}
+        
         # Use the download name from the input field (default to "input" if empty)
         download_name = self.download_name_input.text().strip() or "input"
         if self.quality_selector.currentText() == "audio-only":
@@ -333,12 +330,23 @@ class Card(QFrame):
             out_name = download_name if download_name.endswith(".wav") else download_name + ".wav"
         else:
             out_name = download_name
-        opts = {
+
+        if self.switch.isChecked():
+            global ffmpeg_path
+            ffmpeg_args = trim_args(self.from_input.text(), self.to_input.text())
+            opts = {
             "outtmpl": os.path.join(self.folder_input.text(), out_name),
             "external_downloader": ffmpeg_path,
             "external_downloader_args": ffmpeg_args,
             "format":  get_format_option(self.quality_selector.currentText()),
         }
+        else:
+            opts = {
+                "outtmpl": os.path.join(self.folder_input.text(), out_name),
+                "format":  get_format_option(self.quality_selector.currentText()),
+            }
+        #opts["cookiefile"] = "cookies.txt"
+
         url = self.url_input.text().strip()
         
         ui_state = self.get_ui_state()
