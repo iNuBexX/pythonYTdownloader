@@ -261,9 +261,15 @@ class Card(QFrame):
         self.to_input.textChanged.connect(self.update_download_button)
         self.download_name_input.textChanged.connect(self.update_download_button)
     
-    def open_folder_dialog(self):
-        folder_dialog = QFileDialog()
-        folder_path = folder_dialog.getExistingDirectory(self, "Select Folder")
+    def open_folder_dialog(self):      
+        start_dir = self.folder_input.text().strip() or os.path.expanduser("~/Downloads")
+        
+        folder_path = QFileDialog.getExistingDirectory(
+            self,
+            "Select Folder",
+            start_dir,
+            QFileDialog.Option.ShowDirsOnly
+        )
         if folder_path:
             self.folder_input.setText(folder_path)
             # Update the main window's last folder and save it
