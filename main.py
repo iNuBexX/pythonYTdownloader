@@ -345,11 +345,13 @@ class Card(QFrame):
             "external_downloader": ffmpeg_path,
             "external_downloader_args": ffmpeg_args,
             "format":  get_format_option(self.quality_selector.currentText()),
+            "merge_output_format": "mp4",
         }
         else:
             opts = {
                 "outtmpl": os.path.join(self.folder_input.text(), out_name),
                 "format":  get_format_option(self.quality_selector.currentText()),
+                "merge_output_format": "mp4",
             }
         #opts["cookiefile"] = "cookies.txt"
 
@@ -375,7 +377,7 @@ class Card(QFrame):
         input_base = os.path.join(self.folder_input.text(), download_name)
         output_fileName = download_name if download_name.endswith(".mp4") else download_name + ".mp4"
         # Create and start the conversion thread.
-        self.conversion_thread = ConversionThread(input_base, self.folder_input.text(), output_fileName, deletesOriginal=True)
+        self.conversion_thread = ConversionThread(input_base, self.folder_input.text(), output_fileName, deletesOriginal=False)
         self.conversion_thread.conversion_finished.connect(self.on_conversion_finished)
         self.conversion_thread.start()
 
