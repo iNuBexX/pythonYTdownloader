@@ -335,11 +335,11 @@ class Card(QFrame):
             # Ensure the output name ends with .wav for audio-only downloads
             out_name = download_name if download_name.endswith(".wav") else download_name + ".wav"
         else:
-            out_name = download_name
+            out_name = download_name if download_name.lower().endswith(".mp4") else download_name + ".mp4"
 
         if self.switch.isChecked():
             global ffmpeg_path
-            ffmpeg_args = trim_args(self.from_input.text(), self.to_input.text())
+            ffmpeg_args = trim_args(self.from_input.text().strip(), self.to_input.text().strip())
             opts = {
             "outtmpl": os.path.join(self.folder_input.text(), out_name),
             "external_downloader": ffmpeg_path,

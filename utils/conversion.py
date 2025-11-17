@@ -35,10 +35,10 @@ class Converter:
             ffmpeg_path,         # Use FFmpeg from imageio_ffmpeg
             "-i", input_file,    # Input file
             "-c:v", "libx264",   # Encode video with H.264 (MP4-compatible)
-            "-preset", "slow",   # Higher quality compression
-            "-crf", "2",         # Constant Rate Factor (lower = better quality)
+            "-preset", "fast",   # Higher quality compression
+            "-crf", "22",         # Constant Rate Factor (lower = better quality)
             "-c:a", "aac",       # Convert audio to AAC
-            "-b:a", "128k",      # Set audio bitrate
+            "-b:a", "192k",      # Set audio bitrate
             "-movflags", "+faststart",
             "-y",                # Overwrite output if exists
             output_file
