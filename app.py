@@ -15,6 +15,7 @@ import re
 from utils.trimmer import trim_args
 from utils.conversion import Converter  
 from utils.formatparser import get_format_option
+from PyQt6.QtGui import QFont
 
 vidConverter = Converter()
 ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
@@ -146,12 +147,15 @@ class YouTubeTrimmer(QWidget):
         # Create an overlay widget to indicate downloading in progress
         self.download_overlay = QWidget(self)
         self.download_overlay.setStyleSheet("background-color: rgba(0, 0, 0, 0.7);")
-        self.download_overlay.setGeometry(0, 0, self.width(), self.height())
+        font = QFont()
+        font.setPointSize(12)  # Set a valid font size
+        self.download_overlay.setFont(font)
         overlay_layout = QVBoxLayout(self.download_overlay)
         overlay_layout.addStretch()
         self.downloading_label = QLabel("Downloading...", self.download_overlay)
         self.downloading_label.setStyleSheet("font-size: 20px; color: white;")
         self.downloading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.downloading_label.setFont(font)
         overlay_layout.addWidget(self.downloading_label)
         overlay_layout.addStretch()
          # Add a cancel button to the overlay.
@@ -160,8 +164,26 @@ class YouTubeTrimmer(QWidget):
         self.cancel_button.clicked.connect(self.cancel_current_download)
         overlay_layout.addWidget(self.cancel_button, alignment=Qt.AlignmentFlag.AlignCenter)
         self.download_overlay.hide()
-    
+        
     def resizeEvent(self, event):
+        """
+        Overrides the resizeEvent method to handle widget resizing.
+    
+        This method is triggered automatically whenever the widget is resized.
+        It ensures that the `download_overlay` widget is resized to match the
+        dimensions of the parent widget.
+    
+        Parameters:
+            event (QResizeEvent): The resize event object containing information
+                                  about the new size of the widget.
+    
+        Behavior:
+            - Calls the parent class's `resizeEvent` method to ensure default
+              resizing behavior is preserved.
+            - Adjusts the geometry of the `download_overlay` widget to cover the
+              entire area of the parent widget by setting its position to (0, 0)
+              and its width and height to match the parent's dimensions.
+        """
         super().resizeEvent(event)
         self.download_overlay.setGeometry(0, 0, self.width(), self.height())
     
@@ -404,6 +426,9 @@ class Card(QFrame):
 if __name__ == "__main__":
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("mycompany.myapp")
     app = QApplication(sys.argv)
+    default_font = QFont()
+    default_font.setPointSize(12)  # Ensure the font size is valid
+    app.setFont(default_font)
     app.setWindowIcon(QIcon("yttrimmerIcon.ico"))  # Set the app icon
     window = YouTubeTrimmer()
     window.show()
