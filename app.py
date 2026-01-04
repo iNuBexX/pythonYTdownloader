@@ -12,6 +12,7 @@ import json
 import yt_dlp
 import traceback
 import imageio_ffmpeg  # Ensures FFmpeg is available in the venv
+import subprocess
 import re
 from utils.trimmer import trim_args
 from utils.conversion import Converter  
@@ -502,8 +503,10 @@ class Card(QFrame):
             if not path:
                 return
             if os.name == "nt":
-                # explorer expects the /select,<path> as a single argument
-                subprocess.run(["explorer", f"/select,{path}"])
+                # Use a quoted path with shell=True to ensure Explorer selects the file reliably
+                safe_path = os.path.normpath(path).replace('"', '\\"')
+                cmd = f'explorer /select,"{safe_path}"'
+                subprocess.run(cmd, shell=True)
             else:
                 # fallback: open containing folder
                 folder = os.path.dirname(path)
