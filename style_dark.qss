@@ -6,16 +6,16 @@ QWidget {
 
 /* Buttons */
 QPushButton {
-    background-color:rgb(241, 234, 234);
-    border: 1px solid #4A4A4A;
+    background-color: #2D2D2D;
+    border: 2px solid #555;
+    border-radius: 6px;
     color: #D0D0D0;
     padding: 8px;
-    border-radius: 6px;
-    font-weight: bold;
 }
 
 QPushButton:hover {
     background-color: #3C3C3C;
+    border: 2px solid #777;
 }
 
 /* Themed Special Button */
@@ -27,10 +27,10 @@ QPushButton#addButton {
 
 /* Input Fields */
 QLineEdit {
-    background-color: #2A2A2A;
-    border: 1px solidrgb(175, 174, 174);
+    background-color: #252525;
+    border: 2px solid #555;
+    border-radius: 4px;
     padding: 6px;
-    border-radius: 5px;
     color: #D0D0D0;
 }
 
@@ -51,9 +51,9 @@ QCheckBox {
 QCheckBox::indicator {
     width: 18px;
     height: 18px;
-    border-radius: 4px;
-    border: 1px solid #D0D0D0;
+    border: 2px solid #D0D0D0;
     background-color: #2A2A2A;
+    border-radius: 4px;
 }
 
 QCheckBox::indicator:checked {
@@ -64,4 +64,9 @@ QCheckBox::indicator:checked {
 /* Scroll Area */
 QScrollArea {
     border: 50px;
+}
+
+QLabel {
+    qproperty-alignment: AlignCenter;
+    text-align: center;
 }

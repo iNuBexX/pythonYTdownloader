@@ -1,52 +1,74 @@
-/* General Styles */
 QWidget {
-    background-color: #f5f5f5;
-    color: #222;
+    background-color: #F5F5F5; /* Light Gray */
+    color: #222222; /* Dark Gray */
     font-size: 14px;
-    font-family: Arial, sans-serif;
 }
 
 /* Buttons */
 QPushButton {
-    background-color: #e0e0e0;
-    border: 1px solid #bbb;
-    padding: 8px 12px;
-    border-radius: 5px;
+    background-color: #E8E8E8;
+    border: 2px solid #BBBBBB;
+    border-radius: 6px;
+    color: #222222;
+    padding: 8px;
 }
+
 QPushButton:hover {
-    background-color: #d6d6d6;
+    background-color: #D0D0D0;
+    border: 2px solid #888888;
 }
+
+/* Themed Special Button */
 QPushButton#addButton {
-    background-color: #0078d7;
+    background-color: #0078D7;
+    border: none;
     color: white;
-    font-weight: bold;
 }
-QPushButton#addButton:hover {
-    background-color: #005a9e;
+
+/* Input Fields */
+QLineEdit {
+    background-color: #FFFFFF;
+    border: 2px solid #BBBBBB;
+    border-radius: 4px;
+    padding: 6px;
+    color: #222222;
+}
+
+/* Frames (Cards) */
+QFrame {
+    background-color: #FFFFFF;
+    border: 1px solid #D0D0D0;
+    border-radius: 10px;
+    padding: 10px;
+}
+
+/* CheckBox */
+QCheckBox {
+    spacing: 8px;
+    font-size: 14px;
+}
+
+QCheckBox::indicator {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #222222;
+    background-color: #F0F0F0;
+    border-radius: 4px;
+}
+
+QCheckBox::indicator:checked {
+    background-color: rgb(92, 181, 255);
+    border: 1px solid #0078D7;
 }
 
 /* Scroll Area */
 QScrollArea {
-    background-color: #ffffff;
-    border: none;
+    border: 50px;
 }
 
-/* Card Styling */
-QFrame {
-    background-color: #ffffff;
-    border-radius: 8px;
-    border: 1px solid #ddd;
-    padding: 10px;
-}
-QLineEdit {
-    background-color: #ffffff;
-    color: #222;
-    border: 1px solid #ccc;
-    padding: 6px;
-    border-radius: 4px;
-}
-QLineEdit:focus {
-    border: 1px solid #0078d7;
+QLabel {
+    qproperty-alignment: AlignCenter;
+    text-align: center;
 }
 
 /* Checkboxes */
